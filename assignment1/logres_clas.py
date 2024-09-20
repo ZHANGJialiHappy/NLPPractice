@@ -1,5 +1,6 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import FeatureUnion
 import argparse
 
 def read_data(path):
@@ -19,14 +20,29 @@ def read_data(path):
 
 def train(data_path):
     train_txts, train_golds = read_data(data_path)
-
+    
+# build feature: matrix
     word_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1,2))
-    train_feats = word_vectorizer.fit_transform(train_txts)
-
+    # train_feats = word_vectorizer.fit_transform(train_txts)
+    
+    # Character-level 3-6 grams vectorizer
+    char_vectorizer = CountVectorizer(analyzer='char', ngram_range=(3,6))
+    
+        # Combine both vectorizers using FeatureUnion
+    combined_vectorizer = FeatureUnion([
+        ('word', word_vectorizer),
+        ('char', char_vectorizer)
+    ])
+    
+    # Transform the training data
+    train_feats = combined_vectorizer.fit_transform(train_txts)
+    
+# use matrix to train model: LogisticRegression
     classifier = LogisticRegression(max_iter=500)
     classifier.fit(train_feats, train_golds)
-    return word_vectorizer, classifier
+    return combined_vectorizer, classifier
 
+#训练模型
 def evaluate(dev_path, vectorizer, classifier):
     dev_txts, dev_golds = read_data(dev_path)
     dev_feats = vectorizer.transform(dev_txts)
